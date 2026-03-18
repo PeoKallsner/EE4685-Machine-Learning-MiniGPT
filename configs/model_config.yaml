@@ -1,0 +1,32 @@
+# configs/model_config.yaml
+# -------------------------------------------------------
+# MiniGPT model architecture configuration.
+# These values define the size and shape of the model.
+# Adjust them to experiment with different model scales.
+# -------------------------------------------------------
+
+model:
+  # Vocabulary size (set automatically from the tokeniser, or override here)
+  # TODO: update this once the tokeniser is implemented
+  vocab_size: null   # null = infer from tokeniser
+
+  # Maximum sequence length (context window)
+  block_size: 256
+
+  # Token embedding dimension
+  n_embd: 128
+
+  # Number of transformer decoder layers (blocks)
+  n_layer: 4
+
+  # Number of attention heads (must divide n_embd evenly)
+  n_head: 4
+
+  # Dropout probability applied to attention weights and feed-forward layers
+  dropout: 0.1
+
+  # Feed-forward hidden dimension multiplier (hidden_dim = ffn_multiplier * n_embd)
+  ffn_multiplier: 4
+
+  # Whether to use bias in linear layers and layer norms
+  bias: false
