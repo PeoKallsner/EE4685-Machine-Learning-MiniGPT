@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Data files (raw and processed data should not be tracked)
+data/raw/*
+data/processed/*
+# Keep the directory structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Model checkpoints and saved weights
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Logs
+logs/
+runs/
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE / editor config
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage reports
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Distribution / packaging
+*.manifest
+*.spec
+
+# Environment variables
+.env
+.env.*

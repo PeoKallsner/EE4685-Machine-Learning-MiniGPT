@@ -1,0 +1,41 @@
+# configs/default_config.yaml
+# -------------------------------------------------------
+# Default training configuration for MiniGPT.
+# Override individual values by passing --config <file>
+# or by providing key=value pairs on the command line.
+# -------------------------------------------------------
+
+# ----- Data -----
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  train_file: "train.txt"
+  val_file: "val.txt"
+  test_file: "test.txt"
+  # Fraction of data to use for validation (if no val file exists)
+  val_split: 0.1
+
+# ----- Training -----
+training:
+  batch_size: 32
+  max_epochs: 20
+  learning_rate: 3.0e-4
+  weight_decay: 0.1
+  grad_clip: 1.0
+  # Warmup steps for learning-rate scheduler
+  warmup_steps: 100
+  # Evaluate on the validation set every N steps
+  eval_interval: 500
+  # Save a checkpoint every N steps
+  save_interval: 1000
+  # Directory for saving checkpoints
+  checkpoint_dir: "checkpoints"
+  # Seed for reproducibility
+  seed: 42
+  # Use GPU if available
+  device: "auto"   # "auto" | "cpu" | "cuda" | "mps"
+
+# ----- Logging -----
+logging:
+  log_dir: "logs"
+  log_interval: 100   # Print training loss every N steps
