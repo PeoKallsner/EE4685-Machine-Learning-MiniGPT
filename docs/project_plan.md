@@ -38,7 +38,7 @@ analyse the results.
 - [x] Test stubs (`tests/`)
 
 ### Milestone 2 — Data Pipeline
-- [ ] Download and inspect raw text corpus
+- [x] Download and inspect raw text corpus
 - [ ] Implement `CharTokenizer` (build_vocab, encode, decode, save, load)
 - [ ] Implement `TextDataset` (sliding window pairs)
 - [ ] Implement `prepare_splits` (train / val / test)
