@@ -39,7 +39,6 @@ class TestOutputShape:
         TODO: remove ``pytest.skip`` once MultiHeadSelfAttention.forward is
         implemented.
         """
-        pytest.skip("MultiHeadSelfAttention.forward not yet implemented")
         B, T, C = 2, 16, 64
         x = torch.randn(B, T, C)
         out = attn(x)
@@ -54,7 +53,6 @@ class TestCausalMask:
 
         TODO: remove ``pytest.skip`` once the causal mask is implemented.
         """
-        pytest.skip("MultiHeadSelfAttention causal mask not yet implemented")
         attn.eval()
         B, T, C = 1, 8, 64
         x = torch.randn(B, T, C)

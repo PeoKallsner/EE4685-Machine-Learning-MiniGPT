@@ -31,12 +31,15 @@ def set_seed(seed: int) -> None:
 
     TODO:
         - Call ``random.seed(seed)``.
-        - Call ``np.random.seed(seed)``.
-        - Call ``torch.manual_seed(seed)``.
-        - If CUDA is available, call ``torch.cuda.manual_seed_all(seed)``.
+        - Call ``np.random.seed(seed)```.
+        - Call ``torch.manual_seed(seed)```.
+        - If CUDA is available, call ``torch.cuda.manual_seed_all(seed)```.
     """
-    # TODO: implement
-    raise NotImplementedError
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def get_device(device_str: str = "auto") -> torch.device:
@@ -55,8 +58,15 @@ def get_device(device_str: str = "auto") -> torch.device:
           first, then ``torch.backends.mps.is_available()``.
         - Otherwise return ``torch.device(device_str)``.
     """
-    # TODO: implement
-    raise NotImplementedError
+    if device_str == "auto":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            return torch.device("mps")
+        else:
+            return torch.device("cpu")
+    else:
+        return torch.device(device_str)
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -70,8 +80,7 @@ def count_parameters(model: nn.Module) -> int:
 
     TODO: sum ``p.numel()`` for all ``p`` where ``p.requires_grad``.
     """
-    # TODO: implement
-    raise NotImplementedError
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def format_number(n: int) -> str:
@@ -91,5 +100,11 @@ def format_number(n: int) -> str:
 
     TODO: implement with threshold checks for billions, millions, thousands.
     """
-    # TODO: implement
-    raise NotImplementedError
+    if n >= 1_000_000_000:
+        return f"{n / 1_000_000_000:.2f}B"
+    elif n >= 1_000_000:
+        return f"{n / 1_000_000:.2f}M"
+    elif n >= 1_000:
+        return f"{n / 1_000:.2f}K"
+    else:
+        return str(n)

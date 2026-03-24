@@ -80,7 +80,14 @@ class FeedForward(nn.Module):
         bias: bool = False,
     ) -> None:
         super().__init__()
-        # TODO: define self.net as an nn.Sequential with the layers above
+        # Define the feed-forward network: Linear → GELU → Linear → Dropout
+        hidden_dim = n_embd * ffn_multiplier
+        self.net = nn.Sequential(
+            nn.Linear(n_embd, hidden_dim, bias=bias),
+            nn.GELU(),
+            nn.Linear(hidden_dim, n_embd, bias=bias),
+            nn.Dropout(dropout),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply the feed-forward network.
@@ -93,8 +100,7 @@ class FeedForward(nn.Module):
 
         TODO: pass *x* through ``self.net``.
         """
-        # TODO: implement
-        raise NotImplementedError
+        return self.net(x)
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +126,25 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, config: ModelConfig) -> None:
         super().__init__()
-        # TODO: define layer norm, attention, and feed-forward sub-modules
+        # Layer normalization before attention
+        self.ln1 = nn.LayerNorm(config.n_embd)
+        # Multi-head self-attention
+        self.attn = MultiHeadSelfAttention(
+            n_embd=config.n_embd,
+            n_head=config.n_head,
+            block_size=config.block_size,
+            dropout=config.dropout,
+            bias=config.bias,
+        )
+        # Layer normalization before feed-forward
+        self.ln2 = nn.LayerNorm(config.n_embd)
+        # Position-wise feed-forward network
+        self.ffn = FeedForward(
+            n_embd=config.n_embd,
+            ffn_multiplier=config.ffn_multiplier,
+            dropout=config.dropout,
+            bias=config.bias,
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply one transformer block to *x*.
@@ -135,8 +159,11 @@ class TransformerBlock(nn.Module):
             - x = x + self.attn(self.ln1(x))   (attention + residual)
             - x = x + self.ffn(self.ln2(x))    (FFN + residual)
         """
-        # TODO: implement
-        raise NotImplementedError
+        # Attention with residual connection (Pre-LN style)
+        x = x + self.attn(self.ln1(x))
+        # Feed-forward with residual connection (Pre-LN style)
+        x = x + self.ffn(self.ln2(x))
+        return x
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +194,26 @@ class MiniGPT(nn.Module):
     def __init__(self, config: ModelConfig) -> None:
         super().__init__()
         self.config = config
-        # TODO: define all sub-modules
+        
+        # Token embedding table
+        self.token_embed = nn.Embedding(config.vocab_size, config.n_embd)
+        
+        # Positional embedding table
+        self.pos_embed = nn.Embedding(config.block_size, config.n_embd)
+        
+        # Dropout after embeddings
+        self.dropout = nn.Dropout(config.dropout)
+        
+        # Stack of transformer blocks
+        self.blocks = nn.ModuleList(
+            [TransformerBlock(config) for _ in range(config.n_layer)]
+        )
+        
+        # Final layer normalization
+        self.ln_final = nn.LayerNorm(config.n_embd)
+        
+        # Language model head (project to vocabulary)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=config.bias)
 
     def forward(
         self,
@@ -197,13 +243,45 @@ class MiniGPT(nn.Module):
             4. Project to logit space via the LM head.
             5. If *targets* is given, compute cross-entropy loss.
         """
-        # TODO: implement
-        raise NotImplementedError
+        B, T = input_ids.shape
+        assert T <= self.config.block_size, (
+            f"Sequence length {T} exceeds block_size {self.config.block_size}"
+        )
+        
+        # Get token embeddings
+        tok_emb = self.token_embed(input_ids)  # (B, T, C)
+        
+        # Get positional embeddings
+        pos = torch.arange(T, dtype=torch.long, device=input_ids.device)  # (T,)
+        pos_emb = self.pos_embed(pos)  # (T, C)
+        
+        # Combine token and positional embeddings
+        x = tok_emb + pos_emb  # (B, T, C)
+        x = self.dropout(x)
+        
+        # Pass through transformer blocks
+        for block in self.blocks:
+            x = block(x)  # (B, T, C)
+        
+        # Apply final layer norm
+        x = self.ln_final(x)  # (B, T, C)
+        
+        # Project to vocabulary space
+        logits = self.lm_head(x)  # (B, T, vocab_size)
+        
+        # Compute loss if targets provided
+        loss = None
+        if targets is not None:
+            # Reshape for cross-entropy loss (only care about next-token prediction)
+            logits_flat = logits.view(-1, self.config.vocab_size)  # (B*T, vocab_size)
+            targets_flat = targets.view(-1)  # (B*T,)
+            loss = F.cross_entropy(logits_flat, targets_flat)
+        
+        return logits, loss
 
     def count_parameters(self) -> int:
         """Return the total number of trainable parameters.
 
         TODO: sum ``p.numel()`` for all parameters where ``p.requires_grad``.
         """
-        # TODO: implement
-        raise NotImplementedError
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)

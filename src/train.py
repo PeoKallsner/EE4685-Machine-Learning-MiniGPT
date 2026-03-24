@@ -57,8 +57,17 @@ def save_checkpoint(
           step number, and loss.
         - Use ``torch.save`` to write it to *path*.
     """
-    # TODO: implement
-    raise NotImplementedError
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    
+    checkpoint = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "step": step,
+        "loss": loss,
+    }
+    
+    torch.save(checkpoint, path)
 
 
 def load_checkpoint(
@@ -82,8 +91,14 @@ def load_checkpoint(
         - If *optimizer* is given, restore its state too.
         - Return the saved step number.
     """
-    # TODO: implement
-    raise NotImplementedError
+    checkpoint = torch.load(path, weights_only=False)
+    
+    model.load_state_dict(checkpoint["model"])
+    
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint["optimizer"])
+    
+    return checkpoint["step"]
 
 
 # ---------------------------------------------------------------------------
@@ -110,8 +125,33 @@ def build_optimizer(model: MiniGPT, config: Config) -> torch.optim.Optimizer:
         - Separate parameters into "decay" and "no-decay" groups.
         - Instantiate ``torch.optim.AdamW`` with the two groups.
     """
-    # TODO: implement
-    raise NotImplementedError
+    # Separate parameters into decay and no-decay groups
+    decay = set()
+    no_decay = set()
+    
+    for name, param in model.named_parameters():
+        # Biases and layer norm weights should not be decayed
+        if "bias" in name or "LayerNorm" in name or "ln" in name or "norm" in name:
+            no_decay.add(name)
+        else:
+            decay.add(name)
+    
+    # Create parameter groups
+    param_groups = [
+        {
+            "params": [p for n, p in model.named_parameters() if n in decay],
+            "weight_decay": config.training.weight_decay,
+        },
+        {
+            "params": [p for n, p in model.named_parameters() if n in no_decay],
+            "weight_decay": 0.0,
+        },
+    ]
+    
+    # Create AdamW optimizer
+    optimizer = torch.optim.AdamW(param_groups, lr=config.training.learning_rate)
+    
+    return optimizer
 
 
 # ---------------------------------------------------------------------------
@@ -144,5 +184,104 @@ def train(config: Config) -> None:
         - Call :func:`save_checkpoint` at ``config.training.save_interval``
           steps.
     """
-    # TODO: implement
-    raise NotImplementedError
+    from src.utils import set_seed, get_device
+    from src.dataset import TextDataset
+    
+    # Set random seed for reproducibility
+    set_seed(config.training.seed)
+    
+    # Get device
+    device = get_device(config.training.device)
+    print(f"Using device: {device}")
+    
+    # Load datasets
+    processed_dir = Path(config.data.processed_dir)
+    train_ids = torch.load(processed_dir / "train.pt")
+    val_ids = torch.load(processed_dir / "val.pt")
+    
+    train_dataset = TextDataset(train_ids, config.model.block_size)
+    val_dataset = TextDataset(val_ids, config.model.block_size)
+    
+    # Create dataloaders
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.training.batch_size,
+        shuffle=True,
+        drop_last=True,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config.training.batch_size,
+        shuffle=False,
+        drop_last=False,
+    )
+    
+    print(f"Train set size: {len(train_dataset)}")
+    print(f"Val set size: {len(val_dataset)}")
+    
+    # Build model
+    model = MiniGPT(config.model).to(device)
+    print(f"Model parameters: {model.count_parameters():,}")
+    
+    # Build optimizer
+    optimizer = build_optimizer(model, config)
+    print(f"Optimizer: {optimizer}")
+    
+    # Training loop
+    model.train()
+    step = 0
+    
+    for epoch in range(config.training.max_epochs):
+        for batch_idx, (x, y) in enumerate(train_loader):
+            x = x.to(device)
+            y = y.to(device)
+            
+            # Forward pass
+            logits, loss = model(x, y)
+            
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), config.training.grad_clip
+            )
+            
+            # Optimizer step
+            optimizer.step()
+            
+            step += 1
+            
+            # Logging
+            if step % config.logging.log_interval == 0:
+                print(
+                    f"Epoch {epoch + 1}/{config.training.max_epochs} | "
+                    f"Step {step} | Loss {loss.item():.4f}"
+                )
+            
+            # Evaluation
+            if step % config.training.eval_interval == 0:
+                model.eval()
+                val_loss = 0.0
+                with torch.no_grad():
+                    for val_x, val_y in val_loader:
+                        val_x = val_x.to(device)
+                        val_y = val_y.to(device)
+                        _, batch_loss = model(val_x, val_y)
+                        val_loss += batch_loss.item()
+                
+                avg_val_loss = val_loss / len(val_loader)
+                print(f"Step {step} | Val Loss {avg_val_loss:.4f}")
+                model.train()
+            
+            # Checkpointing
+            if step % config.training.save_interval == 0:
+                ckpt_path = (
+                    Path(config.training.checkpoint_dir) 
+                    / f"checkpoint_step_{step}.pt"
+                )
+                save_checkpoint(model, optimizer, step, loss.item(), ckpt_path)
+                print(f"Saved checkpoint to {ckpt_path}")
+    
+    print("Training complete!")

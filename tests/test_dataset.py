@@ -32,7 +32,6 @@ class TestTextDatasetLen:
 
         TODO: remove ``pytest.skip`` once TextDataset.__init__ is implemented.
         """
-        pytest.skip("TextDataset not yet implemented")
         block_size = 10
         ds = TextDataset(token_ids, block_size)
         assert len(ds) == len(token_ids) - block_size
@@ -46,7 +45,6 @@ class TestTextDatasetGetItem:
 
         TODO: remove ``pytest.skip`` once TextDataset.__getitem__ is implemented.
         """
-        pytest.skip("TextDataset not yet implemented")
         block_size = 10
         ds = TextDataset(token_ids, block_size)
         x, y = ds[0]
@@ -58,7 +56,6 @@ class TestTextDatasetGetItem:
 
         TODO: remove ``pytest.skip`` once TextDataset.__getitem__ is implemented.
         """
-        pytest.skip("TextDataset not yet implemented")
         block_size = 10
         ds = TextDataset(token_ids, block_size)
         x, y = ds[0]

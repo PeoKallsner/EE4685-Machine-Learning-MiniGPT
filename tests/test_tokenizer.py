@@ -36,12 +36,10 @@ def tokenizer() -> CharTokenizer:
 class TestBuildVocab:
     """Tests for :meth:`CharTokenizer.build_vocab`."""
 
-    @pytest.mark.skip(reason="CharTokenizer.build_vocab not yet implemented")
     def test_vocab_is_non_empty(self, tokenizer: CharTokenizer) -> None:
         """Vocabulary size should be > 0 after building from non-empty text."""
         assert tokenizer.vocab_size > 0
 
-    @pytest.mark.skip(reason="CharTokenizer.build_vocab not yet implemented")
     def test_all_chars_in_vocab(self, tokenizer: CharTokenizer) -> None:
         """Every character in the training text must be in char_to_id."""
         for ch in "Hello, World!":
@@ -52,7 +50,6 @@ class TestBuildVocab:
 
         TODO: remove ``pytest.skip`` once build_vocab is implemented.
         """
-        pytest.skip("CharTokenizer.build_vocab not yet implemented")
         text = "abcabc"
         t = CharTokenizer()
         t.build_vocab(text)
@@ -62,14 +59,12 @@ class TestBuildVocab:
 class TestEncode:
     """Tests for :meth:`CharTokenizer.encode`."""
 
-    @pytest.mark.skip(reason="CharTokenizer.encode not yet implemented")
     def test_encode_returns_list_of_ints(self, tokenizer: CharTokenizer) -> None:
         """encode should return a list of integers."""
         ids = tokenizer.encode("Hello")
         assert isinstance(ids, list)
         assert all(isinstance(i, int) for i in ids)
 
-    @pytest.mark.skip(reason="CharTokenizer.encode not yet implemented")
     def test_encode_length_matches_input(self, tokenizer: CharTokenizer) -> None:
         """Encoded length should equal the number of characters in the input."""
         text = "Hi!"
@@ -79,7 +74,6 @@ class TestEncode:
 class TestDecode:
     """Tests for :meth:`CharTokenizer.decode`."""
 
-    @pytest.mark.skip(reason="CharTokenizer.encode/decode not yet implemented")
     def test_roundtrip(self, tokenizer: CharTokenizer) -> None:
         """decode(encode(text)) should return the original text."""
         text = "Hello"
@@ -89,7 +83,6 @@ class TestDecode:
 class TestPersistence:
     """Tests for :meth:`CharTokenizer.save` and :meth:`CharTokenizer.load`."""
 
-    @pytest.mark.skip(reason="CharTokenizer.save/load not yet implemented")
     def test_save_and_load_roundtrip(
         self, tokenizer: CharTokenizer, tmp_path
     ) -> None:

@@ -49,7 +49,6 @@ class TestForwardPass:
 
         TODO: remove ``pytest.skip`` once MiniGPT.forward is implemented.
         """
-        pytest.skip("MiniGPT.forward not yet implemented")
         B, T = 2, 16
         input_ids = torch.randint(0, config.vocab_size, (B, T))
         logits, loss = model(input_ids)
@@ -63,7 +62,6 @@ class TestForwardPass:
 
         TODO: remove ``pytest.skip`` once MiniGPT.forward is implemented.
         """
-        pytest.skip("MiniGPT.forward not yet implemented")
         B, T = 2, 16
         input_ids = torch.randint(0, config.vocab_size, (B, T))
         targets = torch.randint(0, config.vocab_size, (B, T))
@@ -76,7 +74,6 @@ class TestForwardPass:
 
         TODO: remove ``pytest.skip`` once MiniGPT.forward is implemented.
         """
-        pytest.skip("MiniGPT.forward not yet implemented")
         B, T = 2, 16
         input_ids = torch.randint(0, config.vocab_size, (B, T))
         targets = torch.randint(0, config.vocab_size, (B, T))
@@ -92,5 +89,4 @@ class TestParameters:
 
         TODO: remove ``pytest.skip`` once count_parameters is implemented.
         """
-        pytest.skip("MiniGPT.count_parameters not yet implemented")
         assert model.count_parameters() > 0

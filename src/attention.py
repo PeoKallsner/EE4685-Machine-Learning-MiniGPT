@@ -76,10 +76,22 @@ class MultiHeadSelfAttention(nn.Module):
         self.n_embd = n_embd
         self.head_dim = n_embd // n_head
 
-        # TODO: define self.q_proj, self.k_proj, self.v_proj (nn.Linear)
-        # TODO: define self.out_proj (nn.Linear)
-        # TODO: define self.attn_dropout and self.resid_dropout (nn.Dropout)
-        # TODO: register a causal mask buffer of shape (1, 1, block_size, block_size)
+        # Q, K, V projection layers
+        self.q_proj = nn.Linear(n_embd, n_embd, bias=bias)
+        self.k_proj = nn.Linear(n_embd, n_embd, bias=bias)
+        self.v_proj = nn.Linear(n_embd, n_embd, bias=bias)
+        
+        # Output projection layer
+        self.out_proj = nn.Linear(n_embd, n_embd, bias=bias)
+        
+        # Dropout layers
+        self.attn_dropout = nn.Dropout(dropout)
+        self.resid_dropout = nn.Dropout(dropout)
+        
+        # Register causal mask buffer (lower triangular matrix)
+        # Positions can attend to themselves and past positions
+        causal_mask = torch.tril(torch.ones(1, 1, block_size, block_size))
+        self.register_buffer("causal_mask", causal_mask)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute causal multi-head self-attention.
@@ -101,5 +113,45 @@ class MultiHeadSelfAttention(nn.Module):
             6. Weighted sum of values.
             7. Reshape and apply the output projection.
         """
-        # TODO: implement
-        raise NotImplementedError
+        B, T, C = x.shape
+        
+        # Project input to Q, K, V
+        Q = self.q_proj(x)  # (B, T, C)
+        K = self.k_proj(x)  # (B, T, C)
+        V = self.v_proj(x)  # (B, T, C)
+        
+        # Reshape to separate heads: (B, T, C) -> (B, T, n_head, head_dim) -> (B, n_head, T, head_dim)
+        Q = Q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        K = K.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        V = V.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        
+        # Compute scaled dot-product attention scores
+        # (B, n_head, T, head_dim) @ (B, n_head, head_dim, T) -> (B, n_head, T, T)
+        scores = (Q @ K.transpose(-2, -1)) / (self.head_dim ** 0.5)
+        
+        # Apply causal mask: prevent attending to future positions
+        # Only use the part of the mask that corresponds to the current sequence length
+        # causal_mask has 1s where attention is allowed, 0s where it's not
+        scores = scores.masked_fill(self.causal_mask[:, :, :T, :T] == 0, float('-inf'))
+        
+        # Softmax to get attention weights
+        attn_weights = F.softmax(scores, dim=-1)
+        
+        # Apply dropout to attention weights
+        attn_weights = self.attn_dropout(attn_weights)
+        
+        # Weighted sum of values
+        # (B, n_head, T, T) @ (B, n_head, T, head_dim) -> (B, n_head, T, head_dim)
+        out = attn_weights @ V
+        
+        # Reshape back to (B, T, C)
+        out = out.transpose(1, 2).contiguous()  # (B, n_head, T, head_dim) -> (B, T, n_head, head_dim)
+        out = out.view(B, T, C)  # (B, T, n_head, head_dim) -> (B, T, C)
+        
+        # Apply output projection
+        out = self.out_proj(out)
+        
+        # Apply residual dropout
+        out = self.resid_dropout(out)
+        
+        return out

@@ -57,8 +57,36 @@ def compute_loss(
         - Accumulate the loss from each batch.
         - Restore training mode (``model.train()``) before returning.
     """
-    # TODO: implement
-    raise NotImplementedError
+    # Set model to eval mode
+    model.eval()
+    
+    total_loss = 0.0
+    total_batches = 0
+    
+    # Iterate over data_loader within torch.no_grad()
+    with torch.no_grad():
+        for batch_idx, (input_ids, targets) in enumerate(data_loader):
+            # Stop if max_batches reached
+            if max_batches is not None and batch_idx >= max_batches:
+                break
+            
+            # Move to device
+            input_ids = input_ids.to(device)
+            targets = targets.to(device)
+            
+            # Forward pass (returns logits and loss)
+            logits, loss = model(input_ids, targets=targets)
+            
+            # Accumulate loss
+            total_loss += loss.item()
+            total_batches += 1
+    
+    # Restore training mode
+    model.train()
+    
+    # Return average loss
+    avg_loss = total_loss / total_batches if total_batches > 0 else 0.0
+    return avg_loss
 
 
 def compute_perplexity(loss: float) -> float:
@@ -72,5 +100,4 @@ def compute_perplexity(loss: float) -> float:
 
     TODO: return ``math.exp(loss)``.
     """
-    # TODO: implement
-    raise NotImplementedError
+    return math.exp(loss)

@@ -48,8 +48,13 @@ class TextDataset(Dataset):
     """
 
     def __init__(self, token_ids: List[int] | torch.Tensor, block_size: int) -> None:
-        # TODO: store token_ids as a torch.LongTensor and save block_size
-        raise NotImplementedError
+        # Convert to torch.LongTensor if necessary
+        if isinstance(token_ids, list):
+            self.data = torch.tensor(token_ids, dtype=torch.long)
+        else:
+            self.data = token_ids.long()
+        
+        self.block_size = block_size
 
     def __len__(self) -> int:
         """Return the number of non-overlapping windows in the dataset.
@@ -57,8 +62,7 @@ class TextDataset(Dataset):
         TODO:
             - Return ``len(self.data) - self.block_size``.
         """
-        # TODO: implement
-        raise NotImplementedError
+        return len(self.data) - self.block_size
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """Return the (input, target) pair at index *idx*.
@@ -74,8 +78,9 @@ class TextDataset(Dataset):
             - Slice ``self.data[idx : idx + block_size]`` as *x*.
             - Slice ``self.data[idx + 1 : idx + block_size + 1]`` as *y*.
         """
-        # TODO: implement
-        raise NotImplementedError
+        x = self.data[idx : idx + self.block_size]
+        y = self.data[idx + 1 : idx + self.block_size + 1]
+        return x, y
 
 
 # ---------------------------------------------------------------------------
@@ -106,5 +111,35 @@ def prepare_splits(
         - Split into train / val / test according to the given fractions.
         - Save each split as a ``.pt`` file using ``torch.save``.
     """
-    # TODO: implement
-    raise NotImplementedError
+    # Read the raw text file
+    with open(raw_text_path, "r", encoding="utf-8") as f:
+        raw_text = f.read()
+    
+    # Build tokenizer vocabulary from the full text
+    tokenizer.build_vocab(raw_text)
+    
+    # Encode the full text into token IDs
+    token_ids = tokenizer.encode(raw_text)
+    
+    # Convert to tensor for easier splitting
+    token_ids_tensor = torch.tensor(token_ids, dtype=torch.long)
+    
+    # Calculate split indices
+    total_tokens = len(token_ids_tensor)
+    val_size = int(total_tokens * val_split)
+    test_size = int(total_tokens * test_split)
+    train_size = total_tokens - val_size - test_size
+    
+    # Split the data
+    train_ids = token_ids_tensor[:train_size]
+    val_ids = token_ids_tensor[train_size : train_size + val_size]
+    test_ids = token_ids_tensor[train_size + val_size :]
+    
+    # Create processed directory if it doesn't exist
+    processed_dir = Path(processed_dir)
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save each split as a .pt file
+    torch.save(train_ids, processed_dir / "train.pt")
+    torch.save(val_ids, processed_dir / "val.pt")
+    torch.save(test_ids, processed_dir / "test.pt")

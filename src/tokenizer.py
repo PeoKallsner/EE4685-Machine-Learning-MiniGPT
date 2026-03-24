@@ -25,6 +25,7 @@ Usage example::
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import List, Optional
 
@@ -48,8 +49,8 @@ class CharTokenizer:
         self.char_to_id: dict[str, int] = {}
         self.id_to_char: dict[int, str] = {}
         self.vocab_size: int = 0
-
-        # TODO: add special tokens (e.g. <PAD>, <UNK>, <BOS>, <EOS>) if needed
+        self.unk_token: str = "<UNK>"
+        self.unk_id: int = -1  # Will be set during build_vocab
 
     # ------------------------------------------------------------------
     # Vocabulary construction
@@ -70,8 +71,18 @@ class CharTokenizer:
             - Populate ``self.char_to_id`` and ``self.id_to_char``.
             - Set ``self.vocab_size``.
         """
-        # TODO: implement
-        raise NotImplementedError
+        # Extract unique characters and sort them for consistency
+        unique_chars = sorted(set(text))
+        
+        # Create mappings from character to ID and vice versa
+        self.char_to_id = {char: idx for idx, char in enumerate(unique_chars)}
+        self.id_to_char = {idx: char for char, idx in self.char_to_id.items()}
+        
+        # Set the vocabulary size (not including <UNK>)
+        self.vocab_size = len(unique_chars)
+        
+        # Set the <UNK> token ID as the next available ID
+        self.unk_id = self.vocab_size
 
     # ------------------------------------------------------------------
     # Encoding / Decoding
@@ -93,8 +104,18 @@ class CharTokenizer:
             - Look up each character in ``self.char_to_id``.
             - Handle unknown characters gracefully (skip or map to <UNK>).
         """
-        # TODO: implement
-        raise NotImplementedError
+        if not self.char_to_id:
+            raise ValueError("Vocabulary has not been built. Call build_vocab() first.")
+        
+        # Convert each character to its token ID, map unknown characters to <UNK>
+        ids = []
+        for char in text:
+            if char in self.char_to_id:
+                ids.append(self.char_to_id[char])
+            else:
+                ids.append(self.unk_id)
+        
+        return ids
 
     def decode(self, ids: List[int]) -> str:
         """Convert a list of integer token IDs back into a string.
@@ -112,8 +133,20 @@ class CharTokenizer:
             - Look up each ID in ``self.id_to_char``.
             - Join the characters and return the result.
         """
-        # TODO: implement
-        raise NotImplementedError
+        if not self.id_to_char:
+            raise ValueError("Vocabulary has not been built. Call build_vocab() first.")
+        
+        # Convert each token ID back to its character
+        # Skip <UNK> tokens as they represent unknown characters
+        chars = []
+        for token_id in ids:
+            if token_id in self.id_to_char:
+                chars.append(self.id_to_char[token_id])
+            elif token_id != self.unk_id:
+                # If it's not in the mapping and not <UNK>, skip it
+                pass
+        
+        return "".join(chars)
 
     # ------------------------------------------------------------------
     # Persistence
@@ -127,8 +160,17 @@ class CharTokenizer:
 
         TODO: implement using ``json.dump``.
         """
-        # TODO: implement
-        raise NotImplementedError
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        vocab_data = {
+            "char_to_id": self.char_to_id,
+            "id_to_char": self.id_to_char,
+            "vocab_size": self.vocab_size,
+        }
+        
+        with open(path, "w") as f:
+            json.dump(vocab_data, f, indent=2)
 
     def load(self, path: str | Path) -> None:
         """Load a previously saved vocabulary from a JSON file.
@@ -138,8 +180,19 @@ class CharTokenizer:
 
         TODO: implement using ``json.load``.
         """
-        # TODO: implement
-        raise NotImplementedError
+        path = Path(path)
+        
+        with open(path, "r") as f:
+            vocab_data = json.load(f)
+        
+        # Restore the vocabulary mappings
+        # Note: JSON keys are strings, so we need to convert id_to_char keys back to integers
+        self.char_to_id = vocab_data["char_to_id"]
+        self.id_to_char = {int(k): v for k, v in vocab_data["id_to_char"].items()}
+        self.vocab_size = vocab_data["vocab_size"]
+        
+        # Restore the <UNK> token ID based on the vocab size
+        self.unk_id = self.vocab_size
 
     # ------------------------------------------------------------------
     # Dunder helpers
