@@ -227,9 +227,21 @@ def train(config: Config) -> None:
     optimizer = build_optimizer(model, config)
     print(f"Optimizer: {optimizer}")
     
-    # Training loop
-    model.train()
+    # Try to load from the latest checkpoint
     step = 0
+    checkpoint_dir = Path(config.training.checkpoint_dir)
+    checkpoints = sorted(checkpoint_dir.glob("checkpoint_step_*.pt"))
+    
+    if checkpoints:
+        latest_ckpt = checkpoints[-1]
+        print(f"\nLoading checkpoint: {latest_ckpt.name}")
+        step = load_checkpoint(latest_ckpt, model, optimizer)
+        print(f"Resumed from step {step}\n")
+    
+    # Training loop
+    best_val_loss = float('inf')
+    steps_without_improvement = 0
+    early_stopping_patience = 200  # Stop if no improvement for 200 steps
     
     for epoch in range(config.training.max_epochs):
         for batch_idx, (x, y) in enumerate(train_loader):
@@ -273,6 +285,27 @@ def train(config: Config) -> None:
                 
                 avg_val_loss = val_loss / len(val_loader)
                 print(f"Step {step} | Val Loss {avg_val_loss:.4f}")
+                
+                # Early stopping logic
+                if avg_val_loss < best_val_loss:
+                    best_val_loss = avg_val_loss
+                    steps_without_improvement = 0
+                    if step > 100:  # Don't print on first evaluation
+                        print(f"  ✓ New best!")
+                else:
+                    steps_without_improvement += config.training.eval_interval
+                    if step > 100:
+                        print(f"  No improvement ({steps_without_improvement}/{early_stopping_patience})")
+                    
+                    # Check early stopping
+                    if steps_without_improvement >= early_stopping_patience:
+                        print(f"\n{'='*70}")
+                        print(f"EARLY STOPPING: No improvement for {steps_without_improvement} steps")
+                        print(f"Best validation loss: {best_val_loss:.4f}")
+                        print(f"{'='*70}\n")
+                        model.train()
+                        return  # Exit training
+                
                 model.train()
             
             # Checkpointing
